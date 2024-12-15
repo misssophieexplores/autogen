@@ -56,7 +56,7 @@ from .types import (
     interactiveregion_from_dict,
     visualviewport_from_dict,
 )
-
+from datetime import datetime
 # Viewport dimensions
 VIEWPORT_HEIGHT = 900
 VIEWPORT_WIDTH = 1440
@@ -80,8 +80,32 @@ class MultimodalWebSurfer(BaseWorker):
 
     DEFAULT_DESCRIPTION = "A helpful assistant with access to a web browser. Ask them to perform web searches, open pages, and interact with content (e.g., clicking links, scrolling the viewport, etc., filling in form fields, etc.) It can also summarize the entire page, or answer questions based on the content of the page. It can also be asked to sleep and wait for pages to load, in cases where the pages seem to be taking a while to load."
 
-    DEFAULT_START_PAGE = "https://www.bing.com/"
+    DEFAULT_START_PAGE = "https://www.google.com/"
 
+    ###
+    # helpfer function
+    async def _save_mhtml(self, file_path: str) -> None:
+        """
+        Saves the current page as an MHTML file using Chrome DevTools Protocol (CDP).
+
+        Args:
+            file_path (str): The path where the MHTML file will be saved.
+        """
+        assert self._page is not None
+        try:
+            # Connect to Chrome DevTools Protocol (CDP)
+            client = await self._page.context.new_cdp_session(self._page)
+            
+            # Capture MHTML snapshot
+            mhtml_content = await client.send('Page.captureSnapshot', {'format': 'mhtml'})
+
+            # Save the MHTML file
+            async with aiofiles.open(file_path, 'w', newline='') as f:
+                await f.write(mhtml_content['data'])
+        except Exception as e:
+            self.logger.error(f"Failed to save MHTML: {str(e)}")
+
+    ###
     def __init__(
         self,
         description: str = DEFAULT_DESCRIPTION,
@@ -184,6 +208,49 @@ class MultimodalWebSurfer(BaseWorker):
         assert self._page is not None
         await self._page.wait_for_timeout(duration * 1000)
 
+    # async def _set_debug_dir(self, debug_dir: str | None) -> None:
+    #     assert self._page is not None
+    #     self.debug_dir = debug_dir
+    #     if self.debug_dir is None:
+    #         return
+
+    #     if not os.path.isdir(self.debug_dir):
+    #         os.mkdir(self.debug_dir)
+    #     current_timestamp = "_" + int(time.time()).__str__()
+    #     screenshot_png_name = "screenshot" + current_timestamp + ".png"
+    #     debug_html = os.path.join(self.debug_dir, "screenshot" + current_timestamp + ".html")
+    #     if self.to_save_screenshots:
+    #         async with aiofiles.open(debug_html, "wt") as file:
+    #             await file.write(
+    #                 f"""
+    # <html style="width:100%; margin: 0px; padding: 0px;">
+    # <body style="width: 100%; margin: 0px; padding: 0px;">
+    #     <img src= {screenshot_png_name} id="main_image" style="width: 100%; max-width: {VIEWPORT_WIDTH}px; margin: 0px; padding: 0px;">
+    #     <script language="JavaScript">
+    # var counter = 0;
+    # setInterval(function() {{
+    # counter += 1;
+    # document.getElementById("main_image").src = "screenshot.png?bc=" + counter;
+    # }}, 300);
+    #     </script>
+    # </body>
+    # </html>
+    # """.strip(),
+    #             )
+    #     if self.to_save_screenshots:
+    #         await self._page.screenshot(path=os.path.join(self.debug_dir, screenshot_png_name))
+    #         self.logger.info(
+    #             WebSurferEvent(
+    #                 source=self.metadata["type"],
+    #                 url=self._page.url,
+    #                 message="Screenshot: " + screenshot_png_name,
+    #             )
+    #         )
+    #         self.logger.info(
+    #             f"Multimodal Web Surfer debug screens: {pathlib.Path(os.path.abspath(debug_html)).as_uri()}\n"
+    #         )
+
+    ###
     async def _set_debug_dir(self, debug_dir: str | None) -> None:
         assert self._page is not None
         self.debug_dir = debug_dir
@@ -192,48 +259,61 @@ class MultimodalWebSurfer(BaseWorker):
 
         if not os.path.isdir(self.debug_dir):
             os.mkdir(self.debug_dir)
-        current_timestamp = "_" + int(time.time()).__str__()
+
+        # Generate a consistent UTC timestamp
+        current_timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        # File paths
         screenshot_png_name = "screenshot" + current_timestamp + ".png"
-        debug_html = os.path.join(self.debug_dir, "screenshot" + current_timestamp + ".html")
+        mhtml_name = f"screenshot_{current_timestamp}.mhtml"
+        debug_html = os.path.join(self.debug_dir, f"{current_timestamp}_debug.html")
+
         if self.to_save_screenshots:
+            # Save HTML debug file
             async with aiofiles.open(debug_html, "wt") as file:
                 await file.write(
                     f"""
     <html style="width:100%; margin: 0px; padding: 0px;">
     <body style="width: 100%; margin: 0px; padding: 0px;">
-        <img src= {screenshot_png_name} id="main_image" style="width: 100%; max-width: {VIEWPORT_WIDTH}px; margin: 0px; padding: 0px;">
+        <img src="{screenshot_png_name}" id="main_image" style="width: 100%; max-width: {VIEWPORT_WIDTH}px; margin: 0px; padding: 0px;">
         <script language="JavaScript">
     var counter = 0;
     setInterval(function() {{
     counter += 1;
-    document.getElementById("main_image").src = "screenshot.png?bc=" + counter;
+    document.getElementById("main_image").src = "{screenshot_png_name}?bc=" + counter;
     }}, 300);
         </script>
     </body>
     </html>
-    """.strip(),
+    """.strip()
                 )
-        if self.to_save_screenshots:
-            await self._page.screenshot(path=os.path.join(self.debug_dir, screenshot_png_name))
+
+            # Save screenshot
+            screenshot_path = os.path.join(self.debug_dir, screenshot_png_name)
+            await self._page.screenshot(path=screenshot_path)
             self.logger.info(
                 WebSurferEvent(
                     source=self.metadata["type"],
                     url=self._page.url,
-                    message="Screenshot: " + screenshot_png_name,
+                    message=f"Screenshot: {screenshot_png_name}",
                 )
             )
+            # Save MHTML using CDP
+            mhtml_path = os.path.join(self.debug_dir, mhtml_name)
+            await self._save_mhtml(mhtml_path)
             self.logger.info(
-                f"Multimodal Web Surfer debug screens: {pathlib.Path(os.path.abspath(debug_html)).as_uri()}\n"
+                f"Multimodal Web Surfer debug files: {pathlib.Path(os.path.abspath(debug_html)).as_uri()}\n"
             )
-
+    ###
     async def _reset(self, cancellation_token: CancellationToken) -> None:
         assert self._page is not None
         future = super()._reset(cancellation_token)
         await future
         await self._visit_page(self.start_page)
         if self.to_save_screenshots:
-            current_timestamp = "_" + int(time.time()).__str__()
+            # current_timestamp = "_" + int(time.time()).__str__()
+            current_timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
             screenshot_png_name = "screenshot" + current_timestamp + ".png"
+            mhtml_name = f"screenshot_{current_timestamp}.mhtml"
             await self._page.screenshot(path=os.path.join(self.debug_dir, screenshot_png_name))  # type: ignore
             self.logger.info(
                 WebSurferEvent(
@@ -242,6 +322,9 @@ class MultimodalWebSurfer(BaseWorker):
                     message="Screenshot: " + screenshot_png_name,
                 )
             )
+            mhtml_path = os.path.join(self.debug_dir, mhtml_name)
+            await self._save_mhtml(mhtml_path)
+
 
         self.logger.info(
             WebSurferEvent(
@@ -317,7 +400,7 @@ class MultimodalWebSurfer(BaseWorker):
                 await self._visit_page(url)
             # If the argument contains a space, treat it as a search query
             elif " " in url:
-                await self._visit_page(f"https://www.bing.com/search?q={quote_plus(url)}&FORM=QBLH")
+                await self._visit_page(f"https://www.google.com/search?q={quote_plus(url)}&FORM=QBLH")
             # Otherwise, prefix with https://
             else:
                 await self._visit_page("https://" + url)
@@ -329,7 +412,7 @@ class MultimodalWebSurfer(BaseWorker):
         elif name == "web_search":
             query = args.get("query")
             action_description = f"I typed '{query}' into the browser search bar."
-            await self._visit_page(f"https://www.bing.com/search?q={quote_plus(query)}&FORM=QBLH")
+            await self._visit_page(f"https://www.google.com/search?q={quote_plus(query)}&FORM=QBLH")
 
         elif name == "page_up":
             action_description = "I scrolled up one page in the browser."
@@ -434,8 +517,10 @@ class MultimodalWebSurfer(BaseWorker):
 
         new_screenshot = await self._page.screenshot()
         if self.to_save_screenshots:
-            current_timestamp = "_" + int(time.time()).__str__()
+            # current_timestamp = "_" + int(time.time()).__str__()
+            current_timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
             screenshot_png_name = "screenshot" + current_timestamp + ".png"
+            mhtml_name = f"screenshot_{current_timestamp}.mhtml"
             async with aiofiles.open(os.path.join(self.debug_dir, screenshot_png_name), "wb") as file:  # type: ignore
                 await file.write(new_screenshot)  # type: ignore
             self.logger.info(
@@ -445,6 +530,10 @@ class MultimodalWebSurfer(BaseWorker):
                     message="Screenshot: " + screenshot_png_name,
                 )
             )
+            # Save MHTML silently
+            mhtml_path = os.path.join(self.debug_dir, mhtml_name)
+            await self._save_mhtml(mhtml_path)
+
 
         ocr_text = (
             await self._get_ocr_text(new_screenshot, cancellation_token=cancellation_token) if use_ocr is True else ""
@@ -484,8 +573,10 @@ class MultimodalWebSurfer(BaseWorker):
         som_screenshot, visible_rects, rects_above, rects_below = add_set_of_mark(screenshot, rects)
 
         if self.to_save_screenshots:
-            current_timestamp = "_" + int(time.time()).__str__()
+            # current_timestamp = "_" + int(time.time()).__str__()
+            current_timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
             screenshot_png_name = "screenshot_som" + current_timestamp + ".png"
+            mhtml_name = f"screenshot_{current_timestamp}.mhtml"
             som_screenshot.save(os.path.join(self.debug_dir, screenshot_png_name))  # type: ignore
             self.logger.info(
                 WebSurferEvent(
@@ -494,6 +585,11 @@ class MultimodalWebSurfer(BaseWorker):
                     message="Screenshot: " + screenshot_png_name,
                 )
             )
+            # Save MHTML silently
+            mhtml_path = os.path.join(self.debug_dir, mhtml_name)
+            await self._save_mhtml(mhtml_path)
+
+
         # What tools are available?
         tools = [
             TOOL_VISIT_URL,
