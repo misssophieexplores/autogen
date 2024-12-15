@@ -2,18 +2,18 @@ import asyncio
 
 import pytest
 from autogen_agentchat.base import TerminatedException
-from autogen_agentchat.messages import HandoffMessage, StopMessage, TextMessage
-from autogen_agentchat.task import (
+from autogen_agentchat.conditions import (
     ExternalTermination,
     HandoffTermination,
     MaxMessageTermination,
+    SourceMatchTermination,
     StopMessageTermination,
     TextMentionTermination,
     TimeoutTermination,
     TokenUsageTermination,
-    SourceMatchTermination,
 )
-from autogen_core.components.models import RequestUsage
+from autogen_agentchat.messages import HandoffMessage, StopMessage, TextMessage
+from autogen_core.models import RequestUsage
 
 
 @pytest.mark.asyncio
