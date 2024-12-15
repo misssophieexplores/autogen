@@ -106,8 +106,6 @@ async def main(logs_dir: str, hil_mode: bool, save_screenshots: bool, difficulty
         await runtime.send_message(RequestReplyMessage(), user_proxy.id)
         await runtime.stop_when_idle()
 
-    await runtime.stop_when_idle()
-
 
 
 def none_or_int(value):
@@ -185,6 +183,6 @@ if __name__ == "__main__":
     asyncio.run(main(log_folder, args.hil_mode, args.save_screenshots, difficulty, id_query, num_listings, num_pages))
 
 """ 
-python examples/example.py --logs_dir ./logs/ --save_screenshots --difficulty TEST --id_query 2 --num_listings None --num_pages None
+python examples/example.py --logs_dir ./logs/ --save_screenshots --difficulty easy --id_query 0 --num_listings None --num_pages None
 
 """
