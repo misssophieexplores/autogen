@@ -215,7 +215,7 @@ class MultimodalWebSurfer(BaseWorker):
     #     if not os.path.isdir(self.debug_dir):
     #         os.mkdir(self.debug_dir)
     #     current_timestamp = "_" + int(time.time()).__str__()
-    #     screenshot_png_name = "screenshot" + current_timestamp + ".png"
+    #     screenshot_png_name = "screenshot_" + current_timestamp + ".png"
     #     debug_html = os.path.join(self.debug_dir, "screenshot" + current_timestamp + ".html")
     #     if self.to_save_screenshots:
     #         async with aiofiles.open(debug_html, "wt") as file:
@@ -261,7 +261,7 @@ class MultimodalWebSurfer(BaseWorker):
         # Generate a consistent UTC timestamp
         current_timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
         # File paths
-        screenshot_png_name = "screenshot" + current_timestamp + ".png"
+        screenshot_png_name = "screenshot_" + current_timestamp + ".png"
         mhtml_name = f"screenshot_{current_timestamp}.mhtml"
         debug_html = os.path.join(self.debug_dir, f"{current_timestamp}_debug.html")
 
@@ -310,7 +310,7 @@ class MultimodalWebSurfer(BaseWorker):
         if self.to_save_screenshots:
             # current_timestamp = "_" + int(time.time()).__str__()
             current_timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-            screenshot_png_name = "screenshot" + current_timestamp + ".png"
+            screenshot_png_name = "screenshot_" + current_timestamp + ".png"
             mhtml_name = f"screenshot_{current_timestamp}.mhtml"
             await self._page.screenshot(path=os.path.join(self.debug_dir, screenshot_png_name))  # type: ignore
             self.logger.info(
@@ -517,7 +517,7 @@ class MultimodalWebSurfer(BaseWorker):
         if self.to_save_screenshots:
             # current_timestamp = "_" + int(time.time()).__str__()
             current_timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-            screenshot_png_name = "screenshot" + current_timestamp + ".png"
+            screenshot_png_name = "screenshot_" + current_timestamp + ".png"
             mhtml_name = f"screenshot_{current_timestamp}.mhtml"
             async with aiofiles.open(os.path.join(self.debug_dir, screenshot_png_name), "wb") as file:  # type: ignore
                 await file.write(new_screenshot)  # type: ignore
