@@ -108,10 +108,7 @@ async def main(logs_dir: str, hil_mode: bool, save_screenshots: bool, difficulty
 
     await runtime.stop_when_idle()
 
-def none_or_int(value):
-    if value.lower() == "none":
-        return None
-    return int(value)
+
 
 def none_or_int(value):
     if value.lower() == "none":  # Check for the string "none" (case-insensitive)
@@ -168,6 +165,7 @@ if __name__ == "__main__":
                 "logs_dir": args.logs_dir,
                 "hil_mode": args.hil_mode,
                 "save_screenshots": args.save_screenshots,
+                "folder_name": log_folder,
                 "difficulty": difficulty,
                 "id_query": id_query,
                 "num_listings": num_listings,
