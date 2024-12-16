@@ -196,3 +196,4 @@ notebook/coding
 
 # dotnet artifacts
 artifacts
+/python/packages/autogen-magentic-one/log_processing/wandb
