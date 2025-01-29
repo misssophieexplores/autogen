@@ -478,7 +478,8 @@ class MultimodalWebSurfer(BaseChatAgent):
         scaled_screenshot = som_screenshot.resize((self.MLM_WIDTH, self.MLM_HEIGHT))
         som_screenshot.close()
         if self.to_save_screenshots:
-            scaled_screenshot.save(os.path.join(self.debug_dir, "screenshot_scaled.png"))  # type: ignore
+            current_timestamp = "_" + int(time.time()).__str__()
+            scaled_screenshot.save(os.path.join(self.debug_dir, f"screenshot{current_timestamp}_scaled.png"))  # type: ignore
 
         # Add the multimodal message and make the request
         history.append(UserMessage(content=[text_prompt, AGImage.from_pil(scaled_screenshot)], source=self.name))
