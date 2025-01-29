@@ -43,7 +43,7 @@ def generate_query_and_instructions(query_num_listings:Union[int, None], query_n
         "advanced": [
             "Find pet-friendly studio flats for rent London within less than half a mile from the nearest metro station.",
             "Find new-built detached houses for rent in Greater Manchester with at least 3 bedrooms and off-street parking.",
-            "Find furnished student apartments near the University of Texas at Austin for less than $1,500 per person per month, ranked by price per person."
+            "Find furnished student apartments near the University of Texas at Austin for less than $1,500 per person per month."
         ]
     }
     query_template = queries_no_formatting_instructions[difficulty][id_query]
